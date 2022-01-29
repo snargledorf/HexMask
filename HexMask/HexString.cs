@@ -17,15 +17,18 @@ namespace HexMask
             bytes = HexStringParser.Parse(hexString);
         }
 
-        public int ByteCount => bytes?.Length ?? 0;
-
-        public int Length => (bytes?.Length ?? 0) * 2;
+        public int Length => bytes?.Length ?? 0;
 
         public byte this[int index] => bytes[index];
 
-        public override string ToString()
+        public override string ToString() => ToString(true);
+
+        public string ToString(bool includeDashes)
         {
-            return BitConverter.ToString(bytes, 0, bytes.Length);
+            string s = BitConverter.ToString(bytes, 0, bytes.Length);
+            if (!includeDashes)
+                return s.Replace("-", string.Empty);
+            return s;
         }
 
         public byte[] ToArray()

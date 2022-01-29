@@ -1,11 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Collections;
+using System.Collections.ObjectModel;
 
 namespace HexMask
 {
     public struct HexMask : IEquatable<HexMask>
     {
-
         public HexMask(byte[] bytes) : this(new HexString(bytes))
         {
         }
@@ -17,11 +17,25 @@ namespace HexMask
         public HexMask(HexString hexString)
         {
             HexString = hexString;
+
+            BitArray hexBits = new BitArray(hexString.bytes);
+            
+            BitCount = GetBitCount(hexBits);
+            var bits = new bool[BitCount];
+
+            for (int i = 0; i < BitCount; i++)
+                bits[i] = hexBits[i];
+
+            Bits = Array.AsReadOnly(bits);
         }
 
         public bool IsEmpty => HexString.Length == 0;
 
         public HexString HexString { get; }
+
+        public ReadOnlyCollection<bool> Bits { get; }
+
+        public int BitCount { get; }
 
         public static bool Matches(byte[] bytes, string hexMask)
         {
@@ -68,27 +82,42 @@ namespace HexMask
             return Matches(HexStringParser.Parse(hex));
         }
 
-        public bool Matches(byte[] bytes)
+        public bool Matches(ReadOnlySpan<byte> bytes)
         {
-            return Matches(bytes.AsSpan());
+            return Matches(bytes.ToArray());
         }
 
-        public bool Matches(ReadOnlySpan<byte> bytes)
+        public bool Matches(byte[] bytes)
+        {
+            return Matches(new BitArray(bytes));
+        }
+
+        public bool Matches(BitArray bits)
         {
             if (IsEmpty)
                 return true;
 
-            if (bytes.Length < HexString.ByteCount)
+            if (GetBitCount(bits) < BitCount)
                 return false;
 
-            for (int i = 0; i < HexString.ByteCount; i++)
+            for (int i = 0; i < BitCount; i++)
             {
-                byte hexByte = HexString[i];
-                if ((hexByte & bytes[i]) != hexByte)
+                if (Bits[i] && !bits[i])
                     return false;
             }
 
             return true;
+        }
+
+        private static int GetBitCount(BitArray bits)
+        {
+            for (int i = bits.Count - 1; i > 0; i--)
+            {
+                if (bits[i])
+                    return i + 1;
+            }
+
+            return 0;
         }
 
         public override bool Equals(object obj)
